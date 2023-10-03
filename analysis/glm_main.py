@@ -269,7 +269,7 @@ def main():
     
     # Create workflow
     model_wf = Workflow(name='model_wf')
-    model_wf.base_dir = '/project/3018040.07'
+    model_wf.base_dir = project_dir
     tobeconnected = [(subjinfo, get_events, [('sub', 'sub')]),
                     (get_events, spec_model, [('events', 'evfileslist')]),
                     (get_events, spec_model, [('motpar', 'motpar')]),
