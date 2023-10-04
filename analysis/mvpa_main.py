@@ -23,5 +23,6 @@ def decoding_approaches(sub, roi, approach, task, model, dataformat):
     sys.path.append('/project/3018040.07/vistemp_fmri/analysis')
     from mvpa.mvpa_utils import correct_labels, assign_loadfun
     from mvpa.decoding import decode_traintest, decode_CV, \
-        decode_SplitHalf, traintest_dist
-    from general
+        decode_splithalf, traintest_dist
+    from utils import Options, split_options
+    
