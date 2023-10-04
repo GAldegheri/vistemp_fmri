@@ -22,7 +22,7 @@ def add_motion_regressors(subj_info, task, use_motion_reg, motpar):
     - motpar: list of .txt files
     '''
     import sys
-    sys.path.append('/project/3018040.07/vistemp_fmri/analysis/')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
     from glm.motionparameters import read_motion_par
     
     if use_motion_reg:

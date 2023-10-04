@@ -19,7 +19,7 @@ def decoding_approaches(sub, roi, approach, task, model, dataformat):
     """
     import numpy as np
     import sys
-    sys.path.append('/project/3018040.07/vistemp_fmri/analysis/')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
     #import pdb; pdb.set_trace()
     from mvpa.mvpa_utils import correct_labels, assign_loadfun
     from mvpa.decoding import decode_traintest, decode_CV, \
@@ -138,7 +138,7 @@ def save_allres(res_list, out_file):
     """
     import os
     import sys
-    sys.path.append('/project/3018040.07/vistemp_fmri/analysis')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis')
     from configs import mvpa_outdir as data_dir
     import pandas as pd
     import numpy as np

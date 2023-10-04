@@ -20,7 +20,7 @@ def modelspecify(evfileslist, model, motpar):
     """
     import pandas as pd
     import sys
-    sys.path.append('/project/3018040.07/vistemp_fmri/analysis/')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
     from glm.modelspec import (
         specify_model_funcloc,
         specify_model_train,
