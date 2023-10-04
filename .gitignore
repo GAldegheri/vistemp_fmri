@@ -1,0 +1,9 @@
+__pycache__/
+.ipynb_checkpoints/
+crash-*.pklz
+*.nipype
+*.csv
+cleancrashfiles.sh
+infocoupling/TR_timecourses/
+infocoupling/FIR_timecourses/
+workflow_graphs/

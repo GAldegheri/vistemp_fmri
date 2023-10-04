@@ -1,6 +1,5 @@
 from mvpa2.base import dataset
 import numpy as np
-from scipy.stats import pearsonr
 from .core_classifiers import (
     trainandtest_sklearn, CV_leaveoneout,
     splithalfcorr
@@ -15,7 +14,7 @@ import pandas as pd
 # Decoding wrapper functions
 # =================================================================================================
 
-def decode_viewspecific(trainDS, testDS, trainopt, testopt, split=None, thirds='none'):
+def decode_viewspecific(trainDS, testDS, trainopt, testopt, split=None):
     '''
     split = 'train'/'test'/'both'
     thirds = 'train'/'test'/'none'
@@ -65,17 +64,17 @@ def decode_traintest(trainDS, testDS, trainopt, testopt):
     if isAllViews(trainopt) and isAllViews(testopt):
             
         res = decode_viewspecific(trainDS, testDS, trainopt, testopt, \
-                                                    split='both', thirds='none')
+                                                    split='both')
         
     elif isAllViews(trainopt) and not isAllViews(testopt): 
         
         res = decode_viewspecific(trainDS, testDS, trainopt, testopt, \
-                                                    split='train', thirds='none')
+                                                    split='train')
         
     elif not isAllViews(trainopt) and isAllViews(testopt):
         
         res = decode_viewspecific(trainDS, testDS, trainopt, testopt, \
-                                                    split='test', thirds='none')
+                                                    split='test')
         
     else:
         
@@ -84,3 +83,25 @@ def decode_traintest(trainDS, testDS, trainopt, testopt):
     return res
     
 # -------------------------------------------------------------------------------------------------
+
+def decode_CV(DS, opt):
+    
+    if isAllViews(opt):
+        
+        (DS_1, DS_2) = split_views(DS, opt)
+        res_1 = CV_leaveoneout(DS_1, zscore_data=True)
+        res_2 = CV_leaveoneout(DS_2, zscore_data=True)
+        
+        return pd.concat([res_1, res_2])
+        
+    else: # pure vanilla crossval
+        
+        res = CV_leaveoneout(DS, zscore_data=True)
+        return res
+    
+# -------------------------------------------------------------------------------------------------
+
+def decode_splithalf(DS, opt):
+    
+    res = splithalfcorr(DS)
+    return res
