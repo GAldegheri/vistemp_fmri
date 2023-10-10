@@ -4,23 +4,21 @@ import numpy as np
 import sys
 sys.path.append('..')
 
-def quick_get_results(res_list, combine_thirds=True):
+def quick_get_results(res_list):
     """
     Combines all relevant data
     reading functions for quick access
     to the data.
     """
     results = merge_results(res_list)
-    #if combine_thirds:
-    #    varcombs = get_varcombs(results)
+    
     results = parse_roi_info(results)
     results = exclude_participants(results)
-    #results = get_subj_avg(results, avg_decodedirs=True)
-    #results = fill_in_nvoxels(results)
+    
     return results
 
 def exclude_participants(results):
-    res = results[results['subject'].isin([f'sub-{s:03d}' for s in [9, 22, 19, 26]])]
+    res = results[~results['subject'].isin([f'sub-{s:03d}' for s in [9, 22, 19, 26]])]
     return res
 
 def merge_results(res_list):

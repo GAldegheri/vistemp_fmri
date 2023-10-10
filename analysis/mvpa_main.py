@@ -168,9 +168,14 @@ def save_allres(res_list, out_file):
 def main():
     
     # Subject and ROI list
-    subjlist = [f'sub-{i:03d}' for i in range(1, 3)] #1, 35
+    subjlist = [f'sub-{i:03d}' for i in range(1, 35)] #1, 35
     
-    rois_to_use = ['ba-17-18-19-37_{:s}_contr-expwidenarr']
+    #rois_to_use = ['ba-17-18-19-37_{:s}_contr-expwidenarr']
+    rois_to_use = ['ba-17_{:s}_contr-objscrvsbas',
+                   'ba-18_{:s}_contr-objscrvsbas',
+                   'ba-19_{:s}_contr-objscrvsbas',
+                   'ba-17-18_{:s}_contr-objscrvsbas',
+                   'ba-19-37_{:s}_contr-objscrvsbas']
 
     roilist = []
 
@@ -199,6 +204,8 @@ def main():
             voxelnos = voxelnos_1937
         elif '19' in r:
             voxelnos = voxelnos_19
+        elif '37' in r:
+            voxelnos = voxelnos_37
         for vn in voxelnos:
             if '_{:s}' in r:
                 for s in ['L', 'R']:
@@ -216,9 +223,12 @@ def main():
         else:
             roilist.append(r + '_allsignif')
 
-    roilist = []
-
-    full_rois = ['ba-17-18_{:s}', 'LO_{:s}']
+    full_rois = [
+                 'ba-17-18_{:s}', 'ba-19-37_{:s}',
+                 'ba-17-18-19-37_{:s}',
+                 'ba-17_{:s}', 'ba-18_{:s}', 
+                 'ba-19_{:s}', 'ba-37_{:s}',
+                 'LO_{:s}']
     
     for r in full_rois:
         if '{:s}' in r:
@@ -243,7 +253,7 @@ def main():
     decodingnode.iterables = [('dataformat', ['betas']*2),
                               ('approach', ['traintest']*2),
                               ('task', [('train', 'test'), ('test', 'train')]),
-                              ('model', [(6, 3), (3, 6)])]
+                              ('model', [(6, 4), (4, 6)])]
     decodingnode.synchronize = True
     
     # Gather results
@@ -260,7 +270,7 @@ def main():
                       name='savingnode', overwrite=True)
     
     # --------------------------------------
-    savingnode.inputs.out_file = 'try_newformat.csv'
+    savingnode.inputs.out_file = 'results_main.csv'
     print('Output file:', savingnode.inputs.out_file)
     # --------------------------------------
     
