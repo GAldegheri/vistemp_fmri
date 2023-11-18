@@ -172,6 +172,8 @@ def contrastspecify(spm_mat_file):
 
 def main():
     
+    use_FIR = True
+    
     # Utilities
     
     # Identity interface
@@ -203,7 +205,8 @@ def main():
     # Datasink
     datasink = Node(nio.DataSink(parameterization=True), name='datasink')
     datasink.inputs.base_directory = '/project/3018040.07/bids/derivatives/spm-preproc/derivatives/spm-stats'
-    subs = [('_sub_', ''), ('_task_', ''), ('_model', 'model'), ('_use_motion', 'use_motion')]
+    subs = [('_sub_', ''), ('_task_', ''), ('_model', 'model'), ('_use_motion', 'use_motion'),
+            ('_bases_firlength20.order10', 'FIR')]
     datasink.inputs.substitutions = subs
     
     # Custom nodes
@@ -213,7 +216,7 @@ def main():
                            function=modelspecify), overwrite=True, name='spec_model')
 
     spec_model.itersource = ('get_events', 'task')
-    spec_model.iterables = [('model', {'funcloc': [1, 2, 3], 'train': [9], 'test': [9]})]
+    spec_model.iterables = [('model', {'test': [10]})]
     
     add_motion_reg = Node(Function(input_names=['subj_info', 'task', 'use_motion_reg', 'motpar'],
                                output_names=['subj_info'],
@@ -243,7 +246,11 @@ def main():
     level1design = Node(Level1Design(), overwrite=True, name='level1design')
     level1design.inputs.timing_units = 'secs'
     level1design.inputs.interscan_interval = 1.0
-    level1design.inputs.bases = {'hrf':{'derivs': [0,0]}}
+    if use_FIR:
+        # iterables are for creating corresponding folders
+        level1design.iterables = [('bases', [{'fir': {'length': 20, 'order': 10}}])]
+    else:
+        level1design.iterables = [('bases', {'hrf':{'derivs': [0,0]}})]
     level1design.inputs.flags = {'mthresh': 0.8}
     level1design.inputs.microtime_onset = 6.0
     level1design.inputs.microtime_resolution = 11
@@ -284,7 +291,7 @@ def main():
                                             ('spm_mat_file', 'betas.@a'),
                                             ('residual_image', 'betas.@b')])]
 
-    docontrasts = True
+    docontrasts = False
     if docontrasts:
         tobeconnected += [(modelest, spec_contrast, [('spm_mat_file', 'spm_mat_file')]),
                         (modelest, contrest, [('spm_mat_file', 'spm_mat_file')]),
@@ -296,4 +303,18 @@ def main():
                                                 ('spm_mat_file', 'contrasts.@b')])]
     model_wf.connect(tobeconnected)
     
+    model_wf.config['execution']['poll_sleep_duration'] = 1
+    model_wf.config['execution']['job_finished_timeout'] = 120
+    model_wf.config['execution']['remove_unnecessary_outputs'] = True
+    model_wf.config['execution']['stop_on_first_crash'] = True
+
+    model_wf.config['logging'] = {
+            'log_directory': model_wf.base_dir+'/'+model_wf.name,
+            'log_to_file': False}
     
+    # run using PBS:
+    #model_wf.run()
+    model_wf.run('PBS', plugin_args={'max_jobs' : 100, 'qsub_args': '-l walltime=1:00:00,mem=16g', 'max_tries':3,'retry_timeout': 5, 'max_jobname_len': 15})
+    
+if __name__=="__main__":
+    main()

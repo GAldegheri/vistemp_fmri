@@ -171,18 +171,16 @@ def main():
     subjlist = [f'sub-{i:03d}' for i in range(1, 35)] #1, 35
     
     #rois_to_use = ['ba-17-18-19-37_{:s}_contr-expwidenarr']
-    rois_to_use = ['ba-17_{:s}_contr-objscrvsbas',
-                   'ba-18_{:s}_contr-objscrvsbas',
-                   'ba-19_{:s}_contr-objscrvsbas',
-                   'ba-17-18_{:s}_contr-objscrvsbas',
+    rois_to_use = ['ba-17-18_{:s}_contr-objscrvsbas',
                    'ba-19-37_{:s}_contr-objscrvsbas']
+    nothresh = True
 
     roilist = []
 
-    voxelnos_evc = np.arange(100, 1100, 100)
+    voxelnos_evc = np.arange(100, 6100, 100)
     voxelnos_loc = np.arange(100, 1100, 100)
     voxelnos_ppa = np.arange(100, 500, 100)
-    voxelnos_1937 = np.arange(100, 1100, 100)
+    voxelnos_1937 = np.arange(100, 6100, 100)
     voxelnos_17 = np.arange(100, 1100, 100)
     voxelnos_18 = np.arange(100, 1100, 100)
     voxelnos_19 = np.arange(100, 1100, 100)
@@ -209,10 +207,15 @@ def main():
         for vn in voxelnos:
             if '_{:s}' in r:
                 for s in ['L', 'R']:
-                    #pass
-                    roilist.append(r.format(s) + '_top-{:g}'.format(vn))
+                    thisroiname = r.format(s) + '_top-{:g}'.format(vn)
+                    if nothresh:
+                        thisroiname += '_nothresh'
+                    roilist.append(thisroiname)
             else:
-                roilist.append(r + '_top-{:g}'.format(vn))
+                thisroiname = r + '_top-{:g}'.format(vn)
+                if nothresh:
+                    thisroiname += '_nothresh'
+                roilist.append(thisroiname)
                 
     allsignif_rois = []
     
@@ -223,19 +226,21 @@ def main():
         else:
             roilist.append(r + '_allsignif')
 
-    full_rois = [
-                 'ba-17-18_{:s}', 'ba-19-37_{:s}',
-                 'ba-17-18-19-37_{:s}',
-                 'ba-17_{:s}', 'ba-18_{:s}', 
-                 'ba-19_{:s}', 'ba-37_{:s}',
-                 'LO_{:s}']
+    # full_rois = [
+    #              'ba-17-18_{:s}', 'ba-19-37_{:s}',
+    #              'ba-17-18-19-37_{:s}',
+    #              'ba-17_{:s}', 'ba-18_{:s}', 
+    #              'ba-19_{:s}', 'ba-37_{:s}',
+    #              'LO_{:s}']
     
-    for r in full_rois:
-        if '{:s}' in r:
-            for s in ['L', 'R']:
-                roilist.append(r.format(s))
-        else:
-            roilist.append(r)   
+    # for r in full_rois:
+    #     if '{:s}' in r:
+    #         for s in ['L', 'R']:
+    #             roilist.append(r.format(s))
+    #     else:
+    #         roilist.append(r)   
+    
+    roilist = ['ba-19-37-infocoupling']
             
     print('------------------- ROI list: -------------------')
     print(roilist)
@@ -270,7 +275,7 @@ def main():
                       name='savingnode', overwrite=True)
     
     # --------------------------------------
-    savingnode.inputs.out_file = 'results_main.csv'
+    savingnode.inputs.out_file = 'results_infocouplROI.csv'
     print('Output file:', savingnode.inputs.out_file)
     # --------------------------------------
     

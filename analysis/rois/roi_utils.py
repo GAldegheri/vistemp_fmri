@@ -2,7 +2,7 @@ import nibabel as nb
 from nilearn.image import new_img_like
 import numpy as np
 import sys
-sys.path.append('..')
+sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
 from configs import project_dir, bids_dir
 import os
 import copy
@@ -88,6 +88,9 @@ def create_functional_roi(sub, roiname, nvoxels='all',
     
     if split_lr:
         out_file_templ = out_file_templ.replace('_contr', '_{:s}_contr')
+        
+    if tthresh == float('-inf'):
+        out_file_templ = out_file_templ.replace('.nii', '_nothresh.nii')
     
     anat_mask = roi_dict[roiname]['anat_mask']
     tmap_file = os.path.join(bids_dir, 'derivatives', 'spm-preproc',
@@ -182,6 +185,64 @@ def create_brodmann_roi(ba_number):
     
     return ba_img
 
+def slice_brain(winsize=13, axis=1, hemi='LR', method='slidingwindow', mask='wholebrain'):
+    """
+    Args:
+    - winsize: size of the slice in voxels
+    - axis: which axis to slice along
+    - hemi: 'L', 'R' or 'LR'
+    - method: 'slidingwindow' or 'nonoverlap'
+    - mask: 'wholebrain' or 'visualsystem' (BAs 17, 18, 19, 37)
+    """
+    if mask == 'wholebrain':
+        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'wholebrain.nii')).get_fdata()
+    elif mask == 'visualsystem':
+        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'ba-17-18-19-37.nii')).get_fdata()
+    
+    start = find_nonzero_index(bigvolume, axis=axis, firstorlast='first')
+    end = find_nonzero_index(bigvolume, axis=axis, firstorlast='last')
+    
+    if method == 'slidingwindow':
+        allindices = list(range(start, end))
+        slices = [(allindices[i], allindices[i+winsize]) for i in range(len(allindices)-winsize)]
+    elif method == 'nonoverlap':
+        raise NotImplementedError('Non-overlap is not implemented yet!')
+    
+    
+    return
+
+def get_slice_mni(sliceroi, axis=1):
+    """
+    Given a nii slice volume,
+    return the MNI indices corresponding
+    to the first and last non-zero element.
+    """
+    
+    
+    
+    return
+
+def find_nonzero_index(array, axis, firstorlast='first'):
+    if firstorlast not in ['first', 'last']:
+        raise ValueError("Parameter 'firstorlast' must be either 'first' or 'last'.")
+
+    mask = array != 0
+    indices = np.where(mask)
+
+    if firstorlast == 'first':
+        if indices[axis].size > 0:
+            return np.min(indices[axis])
+        else:
+            return None  # or any other indication for no non-zero elements
+    else:  # for 'last'
+        if indices[axis].size > 0:
+            return np.max(indices[axis])
+        else:
+            return None
+
+def get_spherical_roi(coords, diam):
+    
+    return
 
 def split_hemispheres(vol):
     
@@ -220,13 +281,17 @@ def reslice_spm(in_file, out_file=None):
         os.rename(reslicedfile, out_file)
     
 if __name__=="__main__":
-    nvoxels = np.arange(100, 1100, 100)
-    allsubjs = [f'sub-{i:03d}' for i in range(1, 35)]
+    # nvoxels = np.arange(100, 6100, 100)
+    # allsubjs = [f'sub-{i:03d}' for i in range(1, 35)]
     
-    roimap = create_brodmann_roi([17, 18, 19, 37])
-    roimap_L, roimap_R = split_hemispheres(roimap)
-    nb.save(roimap_L, os.path.join(roidir, 'ba-17-18-19-37_L.nii'))
-    nb.save(roimap_R, os.path.join(roidir, 'ba-17-18-19-37_R.nii'))
+    # # roimap = create_brodmann_roi([17, 18, 19, 37])
+    # # roimap_L, roimap_R = split_hemispheres(roimap)
+    # # nb.save(roimap_L, os.path.join(roidir, 'ba-17-18-19-37_L.nii'))
+    # # nb.save(roimap_R, os.path.join(roidir, 'ba-17-18-19-37_R.nii'))
     # for s in tqdm(allsubjs):
-    #     create_functional_roi(s, 'ba-17', nvoxels=nvoxels,
-    #                         split_lr=True)
+    #     create_functional_roi(s, 'ba-17-18', nvoxels=nvoxels,
+    #                         split_lr=True, tthresh=float('-inf'))
+    binary_vol = nb.load('../../../anat_roi_masks/ba-17-18-19-37.nii').get_fdata()
+    first_nonzero = find_nonzero_index(binary_vol, axis=0, firstorlast='first')
+    last_nonzero = find_nonzero_index(binary_vol, axis=0, firstorlast='last')
+    print('First:', first_nonzero, ', Last:', last_nonzero)

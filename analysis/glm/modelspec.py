@@ -474,6 +474,19 @@ def specify_model_test(eventsfile, model, behav):
         
         durations.append([0]*len(tgtevents))
         durations.append([0]*len(omsevents))
+        
+    elif model==10:
+        
+        conditions = ['expectedobj']
+        
+        omissionindx = behav.index[behav['target']==0]
+        
+        omissiontrials = events[events['trial_no'].isin(omissionindx)]
+        
+        onsets.append(list(omissiontrials[omissiontrials['event_no']==6].onset))
+        
+        durations.append(list(omissiontrials[omissiontrials['event_no']==8].onset.values - \
+                              omissiontrials[omissiontrials['event_no']==6].onset.values))    
     
     else:
         raise Exception('"{:d}" is not a known model.'.format(model))
