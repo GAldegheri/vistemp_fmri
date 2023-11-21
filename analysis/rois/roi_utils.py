@@ -1,5 +1,5 @@
 import nibabel as nb
-from nilearn.image import new_img_like
+from nilearn.image import new_img_like, coord_transform
 import numpy as np
 import sys
 sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
@@ -12,6 +12,7 @@ MatlabCommand.set_default_matlab_cmd(matlab_cmd)
 MatlabCommand.set_default_paths(spm_dir)
 from nipype.interfaces.spm.utils import Reslice
 from collections.abc import Iterable
+from nltools import create_sphere
 from tqdm import tqdm
 import pdb
 
@@ -195,12 +196,17 @@ def slice_brain(winsize=13, axis=1, hemi='LR', method='slidingwindow', mask='who
     - mask: 'wholebrain' or 'visualsystem' (BAs 17, 18, 19, 37)
     """
     if mask == 'wholebrain':
-        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'wholebrain.nii')).get_fdata()
+        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'wholebrain.nii'))
     elif mask == 'visualsystem':
-        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'ba-17-18-19-37.nii')).get_fdata()
+        bigvolume = nb.load(os.path.join(project_dir, 'anat_roi_masks', 'ba-17-18-19-37.nii'))
+        
+    if hemi == 'L':
+        bigvolume, _ = split_hemispheres(bigvolume)
+    elif hemi == 'R':
+        _, bigvolume = split_hemispheres(bigvolume)
     
-    start = find_nonzero_index(bigvolume, axis=axis, firstorlast='first')
-    end = find_nonzero_index(bigvolume, axis=axis, firstorlast='last')
+    start = find_nonzero_index(bigvolume.get_fdata(), axis=axis, firstorlast='first')
+    end = find_nonzero_index(bigvolume.get_fdata(), axis=axis, firstorlast='last')
     
     if method == 'slidingwindow':
         allindices = list(range(start, end))
@@ -208,8 +214,18 @@ def slice_brain(winsize=13, axis=1, hemi='LR', method='slidingwindow', mask='who
     elif method == 'nonoverlap':
         raise NotImplementedError('Non-overlap is not implemented yet!')
     
+    allslicevols = []
     
-    return
+    for s, e in slices:
+        volslice = np.zeros_like(bigvolume.get_fdata())
+        slices = [slice(None)] * volslice.ndim
+        slices[axis] = slice(s, e)
+
+        volslice[tuple(slices)] = 1
+        volslice = np.multiply(volslice, bigvolume.get_fdata())
+        allslicevols.append(new_img_like(bigvolume, volslice))
+    
+    return allslicevols
 
 def get_slice_mni(sliceroi, axis=1):
     """
@@ -218,9 +234,20 @@ def get_slice_mni(sliceroi, axis=1):
     to the first and last non-zero element.
     """
     
+    start = find_nonzero_index(sliceroi.get_fdata(), axis,
+                               firstorlast='first')
+    end = find_nonzero_index(sliceroi.get_fdata(), axis,
+                             firstorlast='last')
     
+    start_mni = [0, 0, 0]
+    end_mni = [0, 0, 0]
+    start_mni[axis] = start
+    end_mni[axis] = end
     
-    return
+    start_mni = coord_transform(*start_mni, sliceroi.affine)[axis]
+    end_mni = coord_transform(*end_mni, sliceroi.affine)[axis]
+    
+    return start_mni, end_mni
 
 def find_nonzero_index(array, axis, firstorlast='first'):
     if firstorlast not in ['first', 'last']:
@@ -240,9 +267,14 @@ def find_nonzero_index(array, axis, firstorlast='first'):
         else:
             return None
 
-def get_spherical_roi(coords, diam):
+def get_spherical_roi(coords, radius, mask=None):
     
-    return
+    if mask is None:
+        mask = nb.load('/project/3018040.07/anat_roi_masks/wholebrain.nii')
+    
+    sphere_roi = create_sphere(coords, radius=radius, mask=mask)
+    
+    return sphere_roi
 
 def split_hemispheres(vol):
     
@@ -291,7 +323,5 @@ if __name__=="__main__":
     # for s in tqdm(allsubjs):
     #     create_functional_roi(s, 'ba-17-18', nvoxels=nvoxels,
     #                         split_lr=True, tthresh=float('-inf'))
-    binary_vol = nb.load('../../../anat_roi_masks/ba-17-18-19-37.nii').get_fdata()
-    first_nonzero = find_nonzero_index(binary_vol, axis=0, firstorlast='first')
-    last_nonzero = find_nonzero_index(binary_vol, axis=0, firstorlast='last')
-    print('First:', first_nonzero, ', Last:', last_nonzero)
+    slices = slice_brain(mask='visualsystem')
+    coords = get_slice_mni(slices[0])
