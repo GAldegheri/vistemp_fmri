@@ -4,6 +4,7 @@ import numpy as np
 import sys
 sys.path.append('..')
 from tqdm import tqdm
+import re
 
 def quick_get_results(res_list):
     """
@@ -36,6 +37,23 @@ def merge_results(res_list):
     all_results = pd.concat(all_results)
     all_results = all_results.replace(np.nan, 'none')
     return all_results
+
+def group_results(results, avg_across=['split']):
+    ind_vars = ['subject', 'roi', 'approach', 
+        'traindataformat', 'testdataformat', 'traintask',
+        'testtask', 'trainmodel', 'testmodel', 
+        'hemi', 'nvoxels', 'contrast', 'runno', 
+        'view']
+    ind_vars = [i for i in ind_vars if i in results.columns]
+    
+    for v in avg_across:
+        if v in ind_vars:
+            ind_vars.remove(v)
+        else:
+            warnings.warn(f'Column {v} not found in dataframe!')
+    
+    grouped_res = results.groupby(ind_vars, as_index=False, dropna=False).mean().reset_index(drop=True)
+    return grouped_res
 
 def get_subj_avg(results, avg_decodedirs=False):
     results = results.drop(['runno'], axis=1)
@@ -95,6 +113,7 @@ def parse_roi_info(results):
     hemispheres = []
     contrasts = []
     nvoxels = []
+    radii = []
     
     for r in results.roi:
         allinfo = r.split('_')
@@ -106,7 +125,7 @@ def parse_roi_info(results):
             else:
                 hemispheres.append('LR')
                 contrindx = 1
-            if len(allinfo) > contrindx:
+            if len(allinfo) > contrindx and any('contr-' in i for i in allinfo):
                 contrasts.append(allinfo[contrindx].split('contr-')[1])
                 if 'allsignif' in allinfo[contrindx+1]:
                     nvoxels.append('all')
@@ -119,11 +138,18 @@ def parse_roi_info(results):
             hemispheres.append('LR')
             contrasts.append('none')
             nvoxels.append('none')
+        
+        if 'sphere' in r and 'rad' in r:
+            radius = int(re.search(r"rad(\d+)", r).group(1))
+            radii.append(radius)
+        else:
+            radii.append('none')
     
     results['roi'] = roinames
     results['hemi'] = hemispheres
     results['contrast'] = contrasts
     results['nvoxels'] = nvoxels
+    results['radius'] = radii
     
     return results
 

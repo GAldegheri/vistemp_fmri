@@ -313,15 +313,30 @@ def reslice_spm(in_file, out_file=None):
         os.rename(reslicedfile, out_file)
     
 if __name__=="__main__":
+    roidir = '/project/3018040.07/anat_roi_masks'
     # nvoxels = np.arange(100, 6100, 100)
     # allsubjs = [f'sub-{i:03d}' for i in range(1, 35)]
     
-    # # roimap = create_brodmann_roi([17, 18, 19, 37])
-    # # roimap_L, roimap_R = split_hemispheres(roimap)
-    # # nb.save(roimap_L, os.path.join(roidir, 'ba-17-18-19-37_L.nii'))
-    # # nb.save(roimap_R, os.path.join(roidir, 'ba-17-18-19-37_R.nii'))
+    roimap = create_brodmann_roi(5)
+    roimap_L, roimap_R = split_hemispheres(roimap)
+    nb.save(roimap_L, os.path.join(roidir, 'ba-5_L.nii'))
+    nb.save(roimap_R, os.path.join(roidir, 'ba-5_R.nii'))
     # for s in tqdm(allsubjs):
     #     create_functional_roi(s, 'ba-17-18', nvoxels=nvoxels,
     #                         split_lr=True, tthresh=float('-inf'))
-    slices = slice_brain(mask='visualsystem')
-    coords = get_slice_mni(slices[0])
+    
+    # wsize = 5
+    # slices_L = slice_brain(mask='visualsystem', hemi='L', winsize=wsize)
+    # slices_R = slice_brain(mask='visualsystem', hemi='R', winsize=wsize)
+    # for i, sl in enumerate(tqdm(slices_L)):
+    #     nb.save(sl, os.path.join(roidir, f'viscortex_slice-{i:02g}_winsize-{wsize:g}_L.nii'))
+        
+    # for i, sr in enumerate(tqdm(slices_R)):
+    #     nb.save(sr, os.path.join(roidir, f'viscortex_slice-{i:02g}_winsize-{wsize:g}_R.nii'))
+    
+    # radii = [13, 15, 17, 19, 21]
+    # center = [-42, -68, 6]
+    
+    # for r in tqdm(radii):
+    #     thissphere = get_spherical_roi(center, r)
+    #     nb.save(thissphere, os.path.join(roidir, f'infocoupling-sphere_rad{r}.nii'))

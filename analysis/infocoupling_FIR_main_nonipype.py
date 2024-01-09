@@ -7,7 +7,7 @@ def decode_FIR_timecourses(sub, roi, task, model, approach):
     import numpy as np
     import pandas as pd
     import sys
-    sys.path.append('/project/3018040.05/rotscenetask_fmri/analysis/')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
     from mvpa.loading import load_betas
     from mvpa.decoding import decode_CV, decode_traintest
     from mvpa.mvpa_utils import correct_labels
@@ -118,86 +118,68 @@ def correlate_timeseqs(tc, sub, roi):
     import pandas as pd
     import numpy as np
     import sys
-    sys.path.append('/project/3018040.05/rotscenetask_fmri/analysis/')
+    sys.path.append('/project/3018040.07/Scripts/vistemp_fmri/analysis/')
     from mvpa.loading import load_betas
-    from mvpa.mvpa_utils import split_expunexp
     from utils import Options
     from nilearn.image import new_img_like
     
     
     n_timepoints = tc.delay.nunique()
-    print(pd.__version__)
-    print(tc.dtypes)
-    print(tc)
-    tc = tc.groupby(['delay', 'expected']).mean().reset_index()
+    tc = tc.groupby(['delay']).mean().reset_index()
     
     
     # load FIR timecourses
     univar_opt = Options(
         sub=sub, 
         task='test',
-        model=27
+        model=10
     )
     
     wholebrainDS = load_betas(univar_opt, mask_templ=None, 
                              fir=True)
-    wholebrainDS = split_expunexp(wholebrainDS)
     nanmask = np.all(np.isfinite(wholebrainDS.samples), axis=0)
     wholebrainDS = wholebrainDS[:, nanmask]
     
     univar_df = pd.DataFrame(
         {'delay': list(wholebrainDS.sa.delay),
-         'expected': list(wholebrainDS.sa.expected),
          'samples': list(wholebrainDS.samples)}
     )
-    print(univar_df.dtypes)
-    univar_df = univar_df.groupby(['delay', 'expected']).mean().reset_index()
+    univar_df = univar_df.groupby(['delay']).mean().reset_index()
     
-    # Get (n. voxels x n. timepoints) arrays for exp and unexp
-    exp_univar_array = np.vstack(univar_df[univar_df.expected==1].samples).T
-    unexp_univar_array = np.vstack(univar_df[univar_df.expected==0].samples).T
+    # Get (n. voxels x n. timepoints) array
+    univar_array = np.vstack(univar_df.samples).T
     # Normalize
-    exp_univar_array = (exp_univar_array - np.mean(exp_univar_array, axis=1, keepdims=True))/np.std(exp_univar_array, axis=1, keepdims=True)
-    unexp_univar_array = (unexp_univar_array - np.mean(unexp_univar_array, axis=1, keepdims=True))/np.std(unexp_univar_array, axis=1, keepdims=True)
+    univar_array = (univar_array - np.mean(univar_array, axis=1, keepdims=True))/np.std(univar_array, axis=1, keepdims=True)
     
     # Same thing for multivariate sequence
-    exp_multivar_array = np.hstack(tc[tc.expected==True].distance).reshape(1, n_timepoints)
-    unexp_multivar_array = np.hstack(tc[tc.expected==False].distance).reshape(1, n_timepoints)
-    exp_multivar_array = (exp_multivar_array - np.mean(exp_multivar_array, axis=1, keepdims=True))/np.std(exp_multivar_array, axis=1, keepdims=True)
-    unexp_multivar_array = (unexp_multivar_array - np.mean(unexp_multivar_array, axis=1, keepdims=True))/np.std(unexp_multivar_array, axis=1, keepdims=True)
+    multivar_array = np.hstack(tc.distance).reshape(1, n_timepoints)
+    multivar_array = (multivar_array - np.mean(multivar_array, axis=1, keepdims=True))/np.std(multivar_array, axis=1, keepdims=True)
     
     # Compute Pearsons correlations
-    exp_corrs = np.dot(exp_univar_array, exp_multivar_array.T)/(n_timepoints-1)
-    unexp_corrs = np.dot(unexp_univar_array, unexp_multivar_array.T)/(n_timepoints-1)
+    corrs = np.dot(univar_array, multivar_array.T)/(n_timepoints-1)
     
     # Convert into brain maps
     i, j, k = wholebrainDS.fa.voxel_indices.T
     
-    exp_map = np.full(wholebrainDS.a.voxel_dim, np.nan)
-    exp_map[i, j, k] = exp_corrs.flatten()
-    exp_map = new_img_like('/project/3018040.05/anat_roi_masks/wholebrain.nii', exp_map)
+    corrs_map = np.full(wholebrainDS.a.voxel_dim, np.nan)
+    corrs_map[i, j, k] = corrs.flatten()
+    corrs_map = new_img_like('/project/3018040.07/anat_roi_masks/wholebrain.nii', corrs_map)
     
-    unexp_map = np.full(wholebrainDS.a.voxel_dim, np.nan)
-    unexp_map[i, j, k] = unexp_corrs.flatten()
-    unexp_map = new_img_like('/project/3018040.05/anat_roi_masks/wholebrain.nii', unexp_map)
-    
-    return exp_map, unexp_map, sub, roi
+    return corrs_map, sub, roi
             
 # ---------------------------------------------------------------------------------
 
-def save_corrmaps(exp_map, unexp_map, sub, roi):
+def save_corrmaps(corrs_map, sub, roi):
     import nibabel as nb
     import os
     
-    outdir = os.path.join('/project/3018040.05/',
+    outdir = os.path.join('/project/3018040.07/',
                           'FIR_correlations', roi)
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
     
-    nb.save(exp_map, os.path.join(outdir,
-                                f'{sub}_exp.nii'))
-    nb.save(unexp_map, os.path.join(outdir,
-                                f'{sub}_unexp.nii'))
+    nb.save(corrs_map, os.path.join(outdir,
+                                f'{sub}.nii'))
     
     return    
 
@@ -211,26 +193,27 @@ def main(sub, roi):
     print('Starting decoding...')
     allres, sub, roi = decode_FIR_timecourses(sub, roi, 
                                               ('train', 'test'),
-                                              (5, 24), 'traintest')
+                                              (6, 4), 'traintest')
     print('Done! Computing correlations...')
-    exp_map, unexp_map, sub, roi = correlate_timeseqs(allres, sub, roi)
+    corr_map, sub, roi = correlate_timeseqs(allres, sub, roi)
     print('Done!')
-    save_corrmaps(exp_map, unexp_map, sub, roi)
+    save_corrmaps(corr_map, sub, roi)
     print('Saved files.')
     return
 
 # ---------------------------------------------------------------------------------
 
 if __name__=="__main__":
-    # Create the parser
-    parser = argparse.ArgumentParser()
+    # # Create the parser
+    # parser = argparse.ArgumentParser()
 
-    # Add arguments
-    parser.add_argument("--sub", required=True, type=str, help="Subject")
-    parser.add_argument("--roi", required=True, type=str, help="ROI")
+    # # Add arguments
+    # parser.add_argument("--sub", required=True, type=str, help="Subject")
+    # parser.add_argument("--roi", required=True, type=str, help="ROI")
 
-    # Parse arguments
-    args = parser.parse_args()
+    # # Parse arguments
+    # args = parser.parse_args()
 
-    # Call the main function with the args namespace
-    main(args.sub, args.roi)
+    # # Call the main function with the args namespace
+    # main(args.sub, args.roi)
+    main('sub-001', 'ba-19-37_L_contr-objscrvsbas_top-3000_nothresh')

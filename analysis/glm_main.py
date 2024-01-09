@@ -216,7 +216,7 @@ def main():
                            function=modelspecify), overwrite=True, name='spec_model')
 
     spec_model.itersource = ('get_events', 'task')
-    spec_model.iterables = [('model', {'test': [10]})]
+    spec_model.iterables = [('model', {'test': [4]})]
     
     add_motion_reg = Node(Function(input_names=['subj_info', 'task', 'use_motion_reg', 'motpar'],
                                output_names=['subj_info'],
