@@ -241,7 +241,7 @@ def main():
     #         roilist.append(r)   
     
     #roilist = ['ba-19-37-infocoupling']
-    roilist = [f'infocoupling-sphere_rad{r:g}' for r in [13, 15, 17, 19, 21]]
+    #roilist = [f'infocoupling-sphere_rad{r:g}' for r in [13, 15, 17, 19, 21]]
             
     print('------------------- ROI list: -------------------')
     print(roilist)
@@ -276,7 +276,7 @@ def main():
                       name='savingnode', overwrite=True)
     
     # --------------------------------------
-    savingnode.inputs.out_file = 'results_infocouplspheres_moreradii.csv'
+    savingnode.inputs.out_file = 'results_distfromboundcorrect.csv'
     print('Output file:', savingnode.inputs.out_file)
     # --------------------------------------
     

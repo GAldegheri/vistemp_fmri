@@ -54,7 +54,8 @@ def trainandtest_sklearn(trainDS, testDS, zscore_data=True):
     
     # normalize distance and multiply by correct direction
     zscoredist = (dist - np.mean(dist))/np.std(dist)
-    neglabel = np.unique(res.samples[np.sign(zscoredist)==-1])[0]
+    #neglabel = np.unique(res.samples[np.sign(zscoredist)==-1])[0]
+    neglabel = np.unique(res.samples[np.sign(y)==-1]).item()
     zscoredist[res.targets==neglabel] *= -1
     
     res = pd.DataFrame({'correct': accuracy, 'output': outputs,
