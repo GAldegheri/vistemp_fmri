@@ -4,18 +4,23 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from matplotlib.font_manager import FontProperties
+from pathlib import Path
 import sys
 sys.path.append('..')
 from mne.stats import permutation_cluster_1samp_test
 import plotting.PtitPrince as pt
 
 
-def plot_by_nvoxels(data, measure='distance', tfce_pvals=None, right_part=False, saveimg=False):
+def plot_by_nvoxels(data, measure='distance', tfce_pvals=None, right_part=False, n_perms=10000):
     """
     - data: pandas dataframe containing the data
     - tfce_pvals are provided if they have been precomputed,
         else they're computed here
     """
+    fpath = Path("./fonts/HelveticaWorld-Regular.ttf")
+    fontprop = FontProperties(fname=fpath)
+    
     if right_part:
         assert 'hemi' in data.columns
     assert data.roi.nunique()==1
@@ -33,38 +38,62 @@ def plot_by_nvoxels(data, measure='distance', tfce_pvals=None, right_part=False,
     
     if tfce_pvals is None:
         _, _, tfce_pvals, _ = get_tfce_stats(avgdata.groupby(['subject','nvoxels']).mean().reset_index(),
-                                             measure=measure, n_perms=1000)
+                                             measure=measure, n_perms=n_perms)
             
     fig = plt.figure(figsize=(20,10), facecolor='white')
-    gs = GridSpec(1, 4, figure=fig)
+    gs = GridSpec(4, 4, figure=fig, height_ratios=[1, 4, 4, 1])
     with sns.axes_style('white'):
         if right_part:
-            ax0 = fig.add_subplot(gs[0, :-1])
+            ax0 = fig.add_subplot(gs[1:3, 1:])
         else:
-            ax0 = fig.add_subplot(gs[0, :])
+            ax0 = fig.add_subplot(gs[1:3, :])
         sns.lineplot(data=avgdata.groupby(['subject', 'nvoxels']).mean().reset_index(), 
                      x='nvoxels', y=measure,
-                     palette='Set2', ci=95, marker='o', mec='none', markersize=10) #plot_kws=dict(edgecolor="none")) #markersize=10
-        plt.yticks(fontsize=20)
+                     palette='Dark2', ci=95, marker='o', mec='none', markersize=10)
+        if measure == 'distance':
+            ylabel = 'Classifier Information (a.u.)'
+            ylimits_left = (-0.05, 0.2)
+            ylimits_right = (-0.8, 0.8)
+            yticks = list(np.arange(-0.05, 0.2, 0.05))
+            marker_bottom = -0.04
+            marker_mid = -0.03
+            marker_top = -0.01
+            chancelevel = 0.0
+        elif measure == 'correct':
+            ylabel = 'Decoding Accuracy (a.u.)'
+            ylimits_left = (0.45, 0.6)
+            ylimits_right = (0.1, 0.9)
+            yticks = list(np.arange(0.45, 0.65, 0.05))
+            marker_bottom = 0.46
+            marker_mid = 0.467
+            marker_top = 0.474
+            chancelevel = 0.5
+        plt.yticks(font=fpath, fontsize=28, ticks=yticks)
         #ax0.set(ylim=(0.05, 0.35), xticks=['100']+[str(x) for x in np.arange(500, 3500, 500)])
-        ax0.set(ylim=(-0.05, 0.2), xticks=['100']+[str(x) for x in np.arange(500, maxvoxels+500, 500)])
-        ax0.set_xlabel('Number of Voxels', fontsize=24)
-        ax0.set_ylabel('Classifier information (a.u.)', fontsize=24)
-        plt.xticks(fontsize=20)
+        ax0.set(ylim=ylimits_left, xticks=['100', '500']+[str(x) for x in np.arange(1000, maxvoxels+1000, 1000)])
+        ax0.set_xlabel('Number of Voxels', font=fpath, fontsize=32)
+        ax0.set_ylabel(ylabel, font=fpath, fontsize=32)
+        plt.xticks(font=fpath, fontsize=28)
         plt.margins(0.02)
         ax0.spines['top'].set_visible(False)
         ax0.spines['right'].set_visible(False)
+        ax0.spines['left'].set_linewidth(2)
+        ax0.spines['bottom'].set_linewidth(2)
         for x in np.arange(0, len(tfce_pvals)):
-            if tfce_pvals[x] < 0.01:
-                ax0.scatter(x, -0.040, marker=(6, 2, 0), s=180, color='k', linewidths=1.)
-                ax0.scatter(x, -0.033, marker=(6, 2, 0), s=180, color='k', linewidths=1.)
+            if tfce_pvals[x] < 0.001:
+                ax0.scatter(x, marker_bottom, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
+                ax0.scatter(x, marker_mid, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
+                ax0.scatter(x, marker_top, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
+            elif tfce_pvals[x] < 0.01:
+                ax0.scatter(x, marker_bottom, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
+                ax0.scatter(x, marker_mid, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
             elif tfce_pvals[x] < 0.05:
-                ax0.scatter(x, -0.040, marker=(6, 2, 0), s=180, color='k', linewidths=1.)
-        ax0.axhline(0.0, color='k', linestyle='--', linewidth=2.)
+                ax0.scatter(x, marker_bottom, marker=(6, 2, 0), s=180, color='k', linewidths=2.)
+        ax0.axhline(chancelevel, color='k', linestyle='--', linewidth=2.)
     if right_part:
         avgdata = avgdata.groupby(['subject', 'hemi']).mean().reset_index()
         with sns.axes_style('white'):
-            ax1 = fig.add_subplot(gs[0, -1])
+            ax1 = fig.add_subplot(gs[:, 0])
             _, suppL, densL = pt.half_violinplot(y=measure, data=avgdata[avgdata['hemi']=='L'], color='.8', 
                                                 width=.3, inner=None, bw=.4, flip=False, CI=True, offset=0.04)
             _, suppR, densR = pt.half_violinplot(y=measure, data=avgdata[avgdata['hemi']=='R'], color='.8', 
@@ -100,16 +129,17 @@ def plot_by_nvoxels(data, measure='distance', tfce_pvals=None, right_part=False,
                 #circlemarker = plt.Circle((tick, meandiff), 0.015, color='k')
                 #ax1.add_patch(circlemarker)
                 ax1.plot(tick,meanacc, 'o', markersize=15, color='black')
-            ax1.axhline(0.0, linestyle='--', color='black')
-            plt.yticks(fontsize=20) 
-            ax1.set_xlabel('Average', fontsize=24)
-            ax1.set_ylabel('Classifier information (a.u.)', fontsize=24)
-            ax1.set(ylim=(-0.8, 0.8))
+            ax1.axhline(chancelevel, linestyle='--', color='black', linewidth=2)
+            plt.yticks(font=fpath, fontsize=32) 
+            ax1.set_xlabel('Average', font=fpath, fontsize=32)
+            ax1.set_ylabel(ylabel, font=fpath, fontsize=32)
+            ax1.set(ylim=ylimits_right)
             ax1.axes_style = 'white'
             ax1.spines['top'].set_visible(False)
             ax1.spines['right'].set_visible(False)
             ax1.spines['bottom'].set_visible(False)
-            #ax1.spines['left'].set_visible(False)
+            ax1.spines['left'].set_linewidth(2)
+    plt.subplots_adjust(wspace=0.4)
     plt.tight_layout()
     # if saveimg:
     #     plt.savefig('results_plots/EVC_nvox_distance.pdf')
@@ -118,6 +148,8 @@ def plot_by_nvoxels(data, measure='distance', tfce_pvals=None, right_part=False,
 def get_tfce_stats(data, measure='distance', n_perms=10000):
     subxvoxels = df_to_array_tfce(data.groupby(['subject','nvoxels']).mean().reset_index(),
                                   measure=measure)
+    if measure == 'correct':
+        subxvoxels -= 0.5
     threshold_tfce = dict(start=0, step=0.01)
     t_obs, clusters, cluster_pv, H0 = permutation_cluster_1samp_test(
         subxvoxels, n_jobs=1, threshold=threshold_tfce, adjacency=None,
@@ -134,8 +166,6 @@ def df_to_array_tfce(df, measure='correct'):
             thisdata = df[(df['subject']==sub)&(df['nvoxels']==nv)]
             subxvoxels[i, j] = thisdata[measure].values
     return subxvoxels
-
-
 
 
 def find_nearest(array, value):
